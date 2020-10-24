@@ -7,10 +7,11 @@ import pygame as pg
 H, W = 800, 1200
 WINDOW_TITLE = 'Reflection'
 FPS = 60
-SPARKLE_COUNT = 10
+SPARKLE_COUNT = 50
 BACKGROUND_COLOR = (50, 50, 50)
 SPARKLE_COLOR = (200, 200, 200)
-FIGURE_COLOR = (150, 150, 150)
+BOX_BORDER_COLOR = (220, 220, 220)
+BOX_BACKGROUND_COLOR = (120, 120, 120)
 
 # Коэффициент для перевода градусов в радианы
 K_RADIAN = math.pi / 180
@@ -19,7 +20,7 @@ K_RADIAN = math.pi / 180
 ALL_SEGMENTS = {}
 
 # Словарь для хренения всех фигур
-ALL_FIGURES = []
+ALL_BOXES = []
 
 # Список для хранения всех светлячков
 ALL_SPARKLE_ITERATORS = []
@@ -38,9 +39,16 @@ def draw_sparkle(sc, sparkle_iterators):
         pg.draw.rect(sc, SPARKLE_COLOR, (int(x - 1), int(y - 1), 3, 3))
 
 
-def draw_figures(sc, figures):
-    for figure in figures:
-        pg.draw.polygon(sc, FIGURE_COLOR, figure.dots)
+def draw_boxes(sc, boxes, font):
+    for box in boxes:
+        x = min(box.dots, key=lambda val: val[0])[0]
+        y = min(box.dots, key=lambda val: val[1])[1]
+        center_x, center_y = x + box.width // 2, y + box.height // 2
+        pg.draw.rect(sc, BOX_BACKGROUND_COLOR, (x, y, box.width, box.height))
+        pg.draw.rect(sc, BOX_BORDER_COLOR, (x, y, box.width, box.height), 1)
+
+        text = font.render(str(box.collision_count), 0, (0, 0, 0))
+        sc.blit(text, (center_x - text.get_rect().width // 2, center_y - text.get_rect().height // 2))
 
 
 # -------------------- Вспомогательные функции --------------------
@@ -64,22 +72,14 @@ def create_sparkle_iterators():
         ALL_SPARKLE_ITERATORS.append(iter(sparkle))
 
 
-def create_figures():
+def create_boxes():
     """Функция создает фигуры"""
-    presets = [
-        [(25, 25), (175, 25), (175, 175), (25, 175)],
-        [(25, 100), (100, 25), (175, 100), (100, 175)],
-        [(25, 100), (75, 75), (100, 25), (125, 75), (175, 100), (125, 125), (100, 175), (75, 125)],
-        [(25, 175), (100, 25), (175, 175)],
-        [(25, 75), (75, 25), (125, 25), (175, 75), (175, 125), (125, 175), (75, 175), (25, 125)],
-        [(25, 25), (100, 75), (175, 25), (125, 100), (175, 175), (100, 125), (25, 175), (75, 100)]
-    ]
-    for y0 in range(0, H, 200):
-        for x0 in range(0, W, 200):
-            preset = random.choice(presets)
+    preset = [(100, 100), (300, 100), (300, 300), (100, 300)]
+    for y0 in range(0, H, 400):
+        for x0 in range(0, W, 400):
             dots = [(x0 + dx, y0 + dy) for dx, dy in preset]
-            figure = Figure(dots)
-            ALL_FIGURES.append(figure)
+            figure = Box(dots)
+            ALL_BOXES.append(figure)
             for segment in figure.segments:
                 ALL_SEGMENTS[segment] = figure
 
@@ -163,6 +163,9 @@ class Sparkle:
                     key=lambda val: get_distance(self.dot, val[0])
                 )
                 self.vector = get_reflect_vector(self.vector, self.last_reflect_segment)
+                box = ALL_SEGMENTS[self.last_reflect_segment]
+                if box:
+                    box.collision_count += 1
             else:
                 self.dot = next_dot
 
@@ -178,7 +181,7 @@ class Segment:
         self.length = get_distance(dot1, dot2)
 
 
-class Figure:
+class Box:
 
     def __init__(self, dots):
         self.dots = dots
@@ -188,6 +191,9 @@ class Figure:
             if prev_dot:
                 self.segments.append(Segment(prev_dot, dot))
             prev_dot = dot
+        self.width = max(dots, key=lambda val: val[0])[0] - min(dots, key=lambda val: val[0])[0]
+        self.height = max(dots, key=lambda val: val[1])[1] - min(dots, key=lambda val: val[1])[1]
+        self.collision_count = 0
 
 
 def main():
@@ -195,10 +201,11 @@ def main():
     sc = pg.display.set_mode((W, H))
     pg.display.set_caption(WINDOW_TITLE)
     clock = pg.time.Clock()
+    font = pg.font.SysFont('Arial', 50)
 
     create_borders_segment()
     create_sparkle_iterators()
-    create_figures()
+    create_boxes()
 
     while True:
         events = pg.event.get()
@@ -209,7 +216,7 @@ def main():
 
         draw_background(sc)
         draw_sparkle(sc, ALL_SPARKLE_ITERATORS)
-        draw_figures(sc, ALL_FIGURES)
+        draw_boxes(sc, ALL_BOXES, font)
         pg.display.update()
 
         clock.tick(FPS)
