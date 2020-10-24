@@ -12,6 +12,7 @@ BACKGROUND_COLOR = (50, 50, 50)
 SPARKLE_COLOR = (200, 200, 200)
 BOX_BORDER_COLOR = (220, 220, 220)
 BOX_BACKGROUND_COLOR = (120, 120, 120)
+TEXT_COLOR = (20, 20, 20)
 
 # Коэффициент для перевода градусов в радианы
 K_RADIAN = math.pi / 180
@@ -47,7 +48,7 @@ def draw_boxes(sc, boxes, font):
         pg.draw.rect(sc, BOX_BACKGROUND_COLOR, (x, y, box.width, box.height))
         pg.draw.rect(sc, BOX_BORDER_COLOR, (x, y, box.width, box.height), 1)
 
-        text = font.render(str(box.collision_count), 0, (0, 0, 0))
+        text = font.render(str(box.collision_count), 0, TEXT_COLOR)
         sc.blit(text, (center_x - text.get_rect().width // 2, center_y - text.get_rect().height // 2))
 
 
