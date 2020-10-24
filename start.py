@@ -7,7 +7,7 @@ import pygame as pg
 H, W = 800, 1200
 WINDOW_TITLE = 'Reflection'
 FPS = 60
-SPARKLE_COUNT = 50
+SPARKLE_COUNT = 10
 BACKGROUND_COLOR = (50, 50, 50)
 SPARKLE_COLOR = (200, 200, 200)
 FIGURE_COLOR = (150, 150, 150)
@@ -66,20 +66,22 @@ def create_sparkle_iterators():
 
 def create_figures():
     """Функция создает фигуры"""
-    data = [
-        [(100, 100), (300, 200), (200, 300)],
-        [(200, 400), (300, 500), (200, 600), (100, 500)],
-        [(400, 400), (600, 600), (400, 700), (500, 600)],
-        [(600, 100), (800, 200), (600, 200), (500, 300), (400, 200)],
-        [(1000, 100), (1100, 200), (1100, 400), (1000, 300)],
-        [(1100, 500), (1100, 700), (800, 700), (1000, 600), (1000, 500)],
-        [(800, 300), (900, 500), (800, 600), (800, 500), (700, 400)]
+    presets = [
+        [(25, 25), (175, 25), (175, 175), (25, 175)],
+        [(25, 100), (100, 25), (175, 100), (100, 175)],
+        [(25, 100), (75, 75), (100, 25), (125, 75), (175, 100), (125, 125), (100, 175), (75, 125)],
+        [(25, 175), (100, 25), (175, 175)],
+        [(25, 75), (75, 25), (125, 25), (175, 75), (175, 125), (125, 175), (75, 175), (25, 125)],
+        [(25, 25), (100, 75), (175, 25), (125, 100), (175, 175), (100, 125), (25, 175), (75, 100)]
     ]
-    for dots in data:
-        figure = Figure(dots)
-        ALL_FIGURES.append(figure)
-        for segment in figure.segments:
-            ALL_SEGMENTS[segment] = figure
+    for y0 in range(0, H, 200):
+        for x0 in range(0, W, 200):
+            preset = random.choice(presets)
+            dots = [(x0 + dx, y0 + dy) for dx, dy in preset]
+            figure = Figure(dots)
+            ALL_FIGURES.append(figure)
+            for segment in figure.segments:
+                ALL_SEGMENTS[segment] = figure
 
 
 def get_distance(dot1, dot2):
@@ -182,9 +184,7 @@ class Figure:
         self.dots = dots
         self.segments = []
         prev_dot = None
-        tmp_dots = dots[:]
-        tmp_dots.append(dots[0])
-        for dot in tmp_dots:
+        for dot in dots + [dots[0]]:
             if prev_dot:
                 self.segments.append(Segment(prev_dot, dot))
             prev_dot = dot
