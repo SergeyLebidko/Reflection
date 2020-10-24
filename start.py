@@ -7,14 +7,22 @@ import pygame as pg
 H, W = 800, 1200
 WINDOW_TITLE = 'Reflection'
 FPS = 60
+SPARKLE_COUNT = 50
 BACKGROUND_COLOR = (50, 50, 50)
 SPARKLE_COLOR = (200, 200, 200)
+FIGURE_COLOR = (150, 150, 150)
 
 # Коэффициент для перевода градусов в радианы
 K_RADIAN = math.pi / 180
 
-# Список всех отрезков
-ALL_SEGMENTS = []
+# Словарь для хранения всех отрезков
+ALL_SEGMENTS = {}
+
+# Словарь для хренения всех фигур
+ALL_FIGURES = []
+
+# Список для хранения всех светлячков
+ALL_SPARKLE_ITERATORS = []
 
 
 # -------------------- Функции отрисовки --------------------
@@ -24,12 +32,55 @@ def draw_background(sc):
     sc.fill(BACKGROUND_COLOR)
 
 
-def draw_sparkle(sc, sparkle_iterator):
-    x, y = next(sparkle_iterator)
-    pg.draw.rect(sc, SPARKLE_COLOR, (int(x - 1), int(y - 1), 3, 3))
+def draw_sparkle(sc, sparkle_iterators):
+    for sparkle_iterator in sparkle_iterators:
+        x, y = next(sparkle_iterator)
+        pg.draw.rect(sc, SPARKLE_COLOR, (int(x - 1), int(y - 1), 3, 3))
+
+
+def draw_figures(sc, figures):
+    for figure in figures:
+        pg.draw.polygon(sc, FIGURE_COLOR, figure.dots)
 
 
 # -------------------- Вспомогательные функции --------------------
+
+def create_borders_segment():
+    """Функция создает отрезки - границы окна"""
+    segments_data = [
+        ((0, 0), (0, H)),
+        ((0, H), (W, H)),
+        ((W, H), (W, 0)),
+        ((W, 0), (0, 0))
+    ]
+    for dot1, dot2 in segments_data:
+        ALL_SEGMENTS[Segment(dot1, dot2)] = None
+
+
+def create_sparkle_iterators():
+    """Функция создает итераторы всех светлячков"""
+    for _ in range(SPARKLE_COUNT):
+        sparkle = Sparkle((W // 2, H // 2))
+        ALL_SPARKLE_ITERATORS.append(iter(sparkle))
+
+
+def create_figures():
+    """Функция создает фигуры"""
+    data = [
+        [(100, 100), (300, 200), (200, 300)],
+        [(200, 400), (300, 500), (200, 600), (100, 500)],
+        [(400, 400), (600, 600), (400, 700), (500, 600)],
+        [(600, 100), (800, 200), (600, 200), (500, 300), (400, 200)],
+        [(1000, 100), (1100, 200), (1100, 400), (1000, 300)],
+        [(1100, 500), (1100, 700), (800, 700), (1000, 600), (1000, 500)],
+        [(800, 300), (900, 500), (800, 600), (800, 500), (700, 400)]
+    ]
+    for dots in data:
+        figure = Figure(dots)
+        ALL_FIGURES.append(figure)
+        for segment in figure.segments:
+            ALL_SEGMENTS[segment] = figure
+
 
 def get_distance(dot1, dot2):
     """Функция возвращает расстояние между двумя точками"""
@@ -63,7 +114,7 @@ def get_vector_sum(vector1, vector2):
     return vector1[0] + vector2[0], vector1[1] + vector2[1]
 
 
-def get_vector_mul(vector, value):
+def get_vector_value_mul(vector, value):
     """Функция возвращает произведение вектора на число"""
     return vector[0] * value, vector[1] * value
 
@@ -73,15 +124,16 @@ def get_reflect_vector(vector, segment):
     normal = segment.a, segment.b
     result = get_vector_sum(
         vector,
-        get_vector_mul(normal, -2 * get_scalar_mul(vector, normal) / get_scalar_mul(normal, normal))
+        get_vector_value_mul(normal, -2 * get_scalar_mul(vector, normal) / get_scalar_mul(normal, normal))
     )
     return result
+
 
 # -------------------- Основные классы --------------------
 
 
 class Sparkle:
-    STEP = 10
+    STEP = 5
 
     def __init__(self, dot):
         self.dot = dot
@@ -96,7 +148,7 @@ class Sparkle:
 
             segments = []
             step_segment = Segment(self.dot, next_dot)
-            for segment in ALL_SEGMENTS:
+            for segment in ALL_SEGMENTS.keys():
                 if segment is self.last_reflect_segment:
                     continue
                 intersection_dot = get_intersection(segment, step_segment)
@@ -126,8 +178,16 @@ class Segment:
 
 class Figure:
 
-    def __init__(self, segments):
-        self.segments = segments
+    def __init__(self, dots):
+        self.dots = dots
+        self.segments = []
+        prev_dot = None
+        tmp_dots = dots[:]
+        tmp_dots.append(dots[0])
+        for dot in tmp_dots:
+            if prev_dot:
+                self.segments.append(Segment(prev_dot, dot))
+            prev_dot = dot
 
 
 def main():
@@ -136,17 +196,9 @@ def main():
     pg.display.set_caption(WINDOW_TITLE)
     clock = pg.time.Clock()
 
-    segments_data = [
-        ((0, 0), (0, H)),
-        ((0, H), (W, H)),
-        ((W, H), (W, 0)),
-        ((W, 0), (0, 0))
-    ]
-    for dot1, dot2 in segments_data:
-        ALL_SEGMENTS.append(Segment(dot1, dot2))
-
-    sparkle = Sparkle((W // 2, H // 2))
-    sparkle_iterator = iter(sparkle)
+    create_borders_segment()
+    create_sparkle_iterators()
+    create_figures()
 
     while True:
         events = pg.event.get()
@@ -156,7 +208,8 @@ def main():
                 exit()
 
         draw_background(sc)
-        draw_sparkle(sc, sparkle_iterator)
+        draw_sparkle(sc, ALL_SPARKLE_ITERATORS)
+        draw_figures(sc, ALL_FIGURES)
         pg.display.update()
 
         clock.tick(FPS)
